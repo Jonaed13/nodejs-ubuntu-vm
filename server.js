@@ -1,5 +1,5 @@
 /**
- * 🚀 GOTTY + PROOT TROJAN ENGINE (V5 - IMMORTAL SCREEN EDITION)
+ * 🚀 GOTTY + PROOT TROJAN ENGINE (V5.1 - DNS & PATH FIX)
  * 👤 User: ImGunpoint
  */
 
@@ -70,7 +70,7 @@ async function bootEngine() {
         log('GoTTY binary secured.');
     }
 
-    // 3. Fetch & Build Ubuntu RootFS with ALL Enhancements
+    // 3. Fetch Ubuntu RootFS
     const bashCheckPath = path.join(ROOTFS_DIR, 'bin', 'bash');
     if (!fs.existsSync(bashCheckPath)) {
         const rootfsTar = path.join(__dirname, 'rootfs.tar.gz');
@@ -78,6 +78,12 @@ async function bootEngine() {
         fs.mkdirSync(ROOTFS_DIR, { recursive: true });
         execSync(`tar -xzf ${rootfsTar} -C ${ROOTFS_DIR}`);
         fs.unlinkSync(rootfsTar);
+        
+        // CRITICAL FIX: Bind DNS BEFORE attempting to run apt-get
+        log('Binding DNS Matrix...');
+        const etcDir = path.join(ROOTFS_DIR, 'etc');
+        if (!fs.existsSync(etcDir)) fs.mkdirSync(etcDir, { recursive: true });
+        fs.writeFileSync(path.join(etcDir, 'resolv.conf'), 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n');
         
         log('Injecting full developer matrix (Go, TS, Screen, Proxychains, Tools)...');
         
@@ -112,16 +118,14 @@ async function bootEngine() {
         fs.writeFileSync(path.join(ROOTFS_DIR, 'tmp', 'setup.sh'), setupScript);
         execSync(`${PROOT_PATH} -r ${ROOTFS_DIR} -0 -w / /bin/bash /tmp/setup.sh`, { stdio: 'inherit' });
         log('Subsystem built perfectly.');
-    }
-
-    // 4. Bind DNS for the virtual environment
-    try {
+    } else {
+        // Ensure DNS is always bound on reboot
         const etcDir = path.join(ROOTFS_DIR, 'etc');
         if (!fs.existsSync(etcDir)) fs.mkdirSync(etcDir, { recursive: true });
         fs.writeFileSync(path.join(etcDir, 'resolv.conf'), 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n');
-    } catch (e) {}
+    }
 
-    // 5. Hand the Port Over to GoTTY (Immortal Screen Auto-Boot)
+    // 4. Hand the Port Over to GoTTY (With PATH and Screen Fix)
     log(`Passing execution to GoTTY on port ${PORT}...`);
     const gottyArgs = [
         '-p', PORT.toString(),
@@ -133,7 +137,8 @@ async function bootEngine() {
         '-0', // Emulate root
         '-w', '/root', // Set working directory to /root
         '-b', '/proc', '-b', '/dev', '-b', '/sys',
-        '/usr/bin/screen', '-xRR', 'core_session' // CRITICAL: Boots directly into an immortal screen
+        // CRITICAL FIX: Use bash to initialize the PATH properly, create a safe screen directory, and boot screen
+        '/bin/bash', '-c', 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && export SCREENDIR=/root/.screen && mkdir -p $SCREENDIR && export TERM=xterm-256color && exec /usr/bin/screen -xRR core_session'
     ];
 
     const gottyProcess = spawn(GOTTY_PATH, gottyArgs, { stdio: 'inherit' });
