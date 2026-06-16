@@ -1,5 +1,5 @@
 /**
- * 🚀 GOTTY + PROOT TROJAN ENGINE (V5.1 - DNS & PATH FIX)
+ * 🚀 GOTTY + PROOT TROJAN ENGINE (V6 - THE BULLETPROOF EDITION)
  * 👤 User: ImGunpoint
  */
 
@@ -125,9 +125,10 @@ async function bootEngine() {
         fs.writeFileSync(path.join(etcDir, 'resolv.conf'), 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n');
     }
 
-    // 4. Hand the Port Over to GoTTY (With PATH and Screen Fix)
+    // 4. Hand the Port Over to GoTTY (With PATH, 0.0.0.0 Bind, and Screen Fallback)
     log(`Passing execution to GoTTY on port ${PORT}...`);
     const gottyArgs = [
+        '-a', '0.0.0.0', // CRITICAL: Force GoTTY to accept external cloud traffic
         '-p', PORT.toString(),
         '-w', // Permit write access
         '--reconnect', // Reconnect cleanly on refresh
@@ -137,8 +138,8 @@ async function bootEngine() {
         '-0', // Emulate root
         '-w', '/root', // Set working directory to /root
         '-b', '/proc', '-b', '/dev', '-b', '/sys',
-        // CRITICAL FIX: Use bash to initialize the PATH properly, create a safe screen directory, and boot screen
-        '/bin/bash', '-c', 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && export SCREENDIR=/root/.screen && mkdir -p $SCREENDIR && export TERM=xterm-256color && exec /usr/bin/screen -xRR core_session'
+        // CRITICAL FIX: Graceful fallback if screen fails to install
+        '/bin/bash', '-c', 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && export TERM=xterm-256color && if [ -x /usr/bin/screen ]; then export SCREENDIR=/root/.screen && mkdir -p $SCREENDIR && exec /usr/bin/screen -xRR core_session; else echo -e "\\e[91m[WARNING] Screen failed to install during initial setup. Falling back to standard Bash.\\e[0m\\nRun \\e[93mapt-get update && apt-get install screen\\e[0m manually." && exec /bin/bash; fi'
     ];
 
     const gottyProcess = spawn(GOTTY_PATH, gottyArgs, { stdio: 'inherit' });
