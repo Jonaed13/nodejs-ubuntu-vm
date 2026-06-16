@@ -1,29 +1,33 @@
 FROM ubuntu:22.04
 
+# Prevent frontend interaction flags from freezing the build planner
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install basics + node + git
+# Install foundational build tools and base packages
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     ca-certificates \
-    build-essential
+    build-essential \
+    wget \
+    tar \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js (LTS)
+# Install native Node.js v20 runtime directly on the parent vm
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
-# Create app directory
+# Set up the operational directory matrix
 WORKDIR /app
 
-# Clone your repo
+# Pull your core repository directly into the workspace context
 RUN git clone https://github.com/IamGunpoint/nodejs-ubuntu-vm.git .
 
-# Install dependencies
+# Install parent node environment dependencies smoothly
 RUN npm install || true
 
-# Expose port (change if your server uses different)
+# Forward the designated routing port for web dashboard sync
 EXPOSE 7860
 
-# Run server.js
+# Execute the core glass container engine orchestration pipeline
 CMD ["node", "server.js"]
