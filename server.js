@@ -1,5 +1,5 @@
 /**
- * 🚀 GOTTY + PROOT TROJAN ENGINE (V6 - THE BULLETPROOF EDITION)
+ * 🚀 GOTTY + PROOT TROJAN ENGINE (V7 - THE ULTIMATE MASTER EDITION)
  * 👤 User: ImGunpoint
  */
 
@@ -87,12 +87,18 @@ async function bootEngine() {
         
         log('Injecting full developer matrix (Go, TS, Screen, Proxychains, Tools)...');
         
-        // This script installs EVERY enhancement into the virtual OS
+        // CRITICAL FIX: Repair apt-get GPG permissions inside PRoot before installation
         const setupScript = `
             export DEBIAN_FRONTEND=noninteractive
+            
+            # Fix Ubuntu GPG Sandbox permissions
+            echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99-sandbox
+            chmod 755 /etc/apt/trusted.gpg.d
+            chmod 644 /etc/apt/trusted.gpg.d/*
+            
             apt-get update
             apt-get install -y --no-install-recommends \\
-                curl ca-certificates wget git htop screen nano vim jq zip unzip \\
+                ubuntu-keyring curl ca-certificates wget git htop screen nano vim jq zip unzip \\
                 python3 python3-pip python3-venv build-essential \\
                 fzf ripgrep bat tree net-tools dnsutils gnupg proxychains4 xz-utils
             
@@ -138,7 +144,7 @@ async function bootEngine() {
         '-0', // Emulate root
         '-w', '/root', // Set working directory to /root
         '-b', '/proc', '-b', '/dev', '-b', '/sys',
-        // CRITICAL FIX: Graceful fallback if screen fails to install
+        // CRITICAL FIX: Initialize PATH, safely setup screen folder, and execute fallback if missing
         '/bin/bash', '-c', 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && export TERM=xterm-256color && if [ -x /usr/bin/screen ]; then export SCREENDIR=/root/.screen && mkdir -p $SCREENDIR && exec /usr/bin/screen -xRR core_session; else echo -e "\\e[91m[WARNING] Screen failed to install during initial setup. Falling back to standard Bash.\\e[0m\\nRun \\e[93mapt-get update && apt-get install screen\\e[0m manually." && exec /bin/bash; fi'
     ];
 
