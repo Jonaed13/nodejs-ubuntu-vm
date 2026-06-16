@@ -1,5 +1,5 @@
 /**
- * 🚀 GOTTY + PROOT TROJAN ENGINE (V4)
+ * 🚀 GOTTY + PROOT TROJAN ENGINE (V5 - IMMORTAL SCREEN EDITION)
  * 👤 User: ImGunpoint
  */
 
@@ -70,7 +70,7 @@ async function bootEngine() {
         log('GoTTY binary secured.');
     }
 
-    // 3. Fetch & Build Ubuntu RootFS with Anti-Ban Tools
+    // 3. Fetch & Build Ubuntu RootFS with ALL Enhancements
     const bashCheckPath = path.join(ROOTFS_DIR, 'bin', 'bash');
     if (!fs.existsSync(bashCheckPath)) {
         const rootfsTar = path.join(__dirname, 'rootfs.tar.gz');
@@ -79,26 +79,39 @@ async function bootEngine() {
         execSync(`tar -xzf ${rootfsTar} -C ${ROOTFS_DIR}`);
         fs.unlinkSync(rootfsTar);
         
-        log('Injecting proxychains, Node, and GoLang into virtual subsystem...');
+        log('Injecting full developer matrix (Go, TS, Screen, Proxychains, Tools)...');
+        
+        // This script installs EVERY enhancement into the virtual OS
         const setupScript = `
             export DEBIAN_FRONTEND=noninteractive
             apt-get update
-            apt-get install -y wget curl git nano proxychains4 build-essential screen htop jq
+            apt-get install -y --no-install-recommends \\
+                curl ca-certificates wget git htop screen nano vim jq zip unzip \\
+                python3 python3-pip python3-venv build-essential \\
+                fzf ripgrep bat tree net-tools dnsutils gnupg proxychains4 xz-utils
             
+            # Install Node.js v20 and TypeScript Stack
             curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
             apt-get install -y nodejs
+            npm install -g typescript ts-node yarn
             
+            # Install GoLang 1.22.1
             wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz
             tar -C /usr/local -xzf go1.22.1.linux-amd64.tar.gz
             rm go1.22.1.linux-amd64.tar.gz
             
-            echo 'export PATH=$PATH:/usr/local/go/bin' >> /root/.bashrc
-            echo 'export PS1="\\\\[\\\\e[38;5;45m\\\\]⚡ ImGunpoint@GoTTY\\\\[\\\\e[m\\\\]:\\\\w\\\\$ "' >> /root/.bashrc
+            # Configure Aliases and Paths
+            mkdir -p /root/.local/bin
+            ln -s /usr/bin/batcat /root/.local/bin/bat || true
+            echo 'export PATH=$PATH:/usr/local/go/bin:/root/.local/bin' >> /root/.bashrc
+            
+            # Configure Neon Custom Prompt
+            echo 'export PS1="\\\\[\\\\e[38;5;45m\\\\]⚡ ImGunpoint@GoTTY\\\\[\\\\e[m\\\\]:\\\\[\\\\e[38;5;82m\\\\]\\\\w\\\\[\\\\e[m\\\\]\\\\$ "' >> /root/.bashrc
         `;
         
         fs.writeFileSync(path.join(ROOTFS_DIR, 'tmp', 'setup.sh'), setupScript);
         execSync(`${PROOT_PATH} -r ${ROOTFS_DIR} -0 -w / /bin/bash /tmp/setup.sh`, { stdio: 'inherit' });
-        log('Subsystem built.');
+        log('Subsystem built perfectly.');
     }
 
     // 4. Bind DNS for the virtual environment
@@ -108,19 +121,19 @@ async function bootEngine() {
         fs.writeFileSync(path.join(etcDir, 'resolv.conf'), 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n');
     } catch (e) {}
 
-    // 5. Hand the Port Over to GoTTY
+    // 5. Hand the Port Over to GoTTY (Immortal Screen Auto-Boot)
     log(`Passing execution to GoTTY on port ${PORT}...`);
     const gottyArgs = [
         '-p', PORT.toString(),
         '-w', // Permit write access
         '--reconnect', // Reconnect cleanly on refresh
-        '--title-format', 'ImGunpoint Dev Engine',
+        '--title-format', 'ImGunpoint Terminal',
         PROOT_PATH, // GoTTY executes PRoot
         '-r', ROOTFS_DIR,
         '-0', // Emulate root
         '-w', '/root', // Set working directory to /root
         '-b', '/proc', '-b', '/dev', '-b', '/sys',
-        '/bin/bash', '--login' // Boot bash
+        '/usr/bin/screen', '-xRR', 'core_session' // CRITICAL: Boots directly into an immortal screen
     ];
 
     const gottyProcess = spawn(GOTTY_PATH, gottyArgs, { stdio: 'inherit' });
