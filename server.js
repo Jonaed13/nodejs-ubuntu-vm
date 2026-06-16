@@ -1,5 +1,5 @@
 /**
- * 🚀 GOTTY + PROOT TROJAN ENGINE (V7 - THE ULTIMATE MASTER EDITION)
+ * 🚀 GOTTY + PROOT TROJAN ENGINE (V8 - NUCLEAR APT FIX EDITION)
  * 👤 User: ImGunpoint
  */
 
@@ -79,26 +79,39 @@ async function bootEngine() {
         execSync(`tar -xzf ${rootfsTar} -C ${ROOTFS_DIR}`);
         fs.unlinkSync(rootfsTar);
         
-        // CRITICAL FIX: Bind DNS BEFORE attempting to run apt-get
         log('Binding DNS Matrix...');
         const etcDir = path.join(ROOTFS_DIR, 'etc');
         if (!fs.existsSync(etcDir)) fs.mkdirSync(etcDir, { recursive: true });
         fs.writeFileSync(path.join(etcDir, 'resolv.conf'), 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n');
         
-        log('Injecting full developer matrix (Go, TS, Screen, Proxychains, Tools)...');
+        log('Injecting developer matrix with Nuclear APT Fix...');
         
-        // CRITICAL FIX: Repair apt-get GPG permissions inside PRoot before installation
+        // CRITICAL: This script forces past the blank user and missing GPG keys
         const setupScript = `
             export DEBIAN_FRONTEND=noninteractive
             
-            # Fix Ubuntu GPG Sandbox permissions
+            # --- THE NUCLEAR APT FIX ---
+            # 1. Force apt to run as root to avoid sandbox drops
             echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99-sandbox
-            chmod 755 /etc/apt/trusted.gpg.d
-            chmod 644 /etc/apt/trusted.gpg.d/*
             
+            # 2. Fix missing _apt user which causes the "user ''" error
+            grep -q _apt /etc/passwd || echo "_apt:x:100:65534::/nonexistent:/usr/sbin/nologin" >> /etc/passwd
+            
+            # 3. Create and forcefully unlock the GPG directory
+            mkdir -p /etc/apt/trusted.gpg.d
+            chmod -R 777 /etc/apt/trusted.gpg.d
+            
+            # 4. Bypass signature checks for the very first update
+            apt-get update -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true || true
+            
+            # 5. Install the official keyring to permanently fix signatures
+            apt-get install -y --allow-unauthenticated --no-install-recommends ubuntu-keyring ca-certificates
+            
+            # --- THE TOOLCHAIN INSTALLATION ---
+            # Now run a clean, secure update
             apt-get update
             apt-get install -y --no-install-recommends \\
-                ubuntu-keyring curl ca-certificates wget git htop screen nano vim jq zip unzip \\
+                curl wget git htop screen nano vim jq zip unzip \\
                 python3 python3-pip python3-venv build-essential \\
                 fzf ripgrep bat tree net-tools dnsutils gnupg proxychains4 xz-utils
             
@@ -125,27 +138,25 @@ async function bootEngine() {
         execSync(`${PROOT_PATH} -r ${ROOTFS_DIR} -0 -w / /bin/bash /tmp/setup.sh`, { stdio: 'inherit' });
         log('Subsystem built perfectly.');
     } else {
-        // Ensure DNS is always bound on reboot
         const etcDir = path.join(ROOTFS_DIR, 'etc');
         if (!fs.existsSync(etcDir)) fs.mkdirSync(etcDir, { recursive: true });
         fs.writeFileSync(path.join(etcDir, 'resolv.conf'), 'nameserver 8.8.8.8\nnameserver 8.8.4.4\n');
     }
 
-    // 4. Hand the Port Over to GoTTY (With PATH, 0.0.0.0 Bind, and Screen Fallback)
+    // 4. Hand the Port Over to GoTTY
     log(`Passing execution to GoTTY on port ${PORT}...`);
     const gottyArgs = [
-        '-a', '0.0.0.0', // CRITICAL: Force GoTTY to accept external cloud traffic
+        '-a', '0.0.0.0', // Force external traffic
         '-p', PORT.toString(),
         '-w', // Permit write access
-        '--reconnect', // Reconnect cleanly on refresh
+        '--reconnect', 
         '--title-format', 'ImGunpoint Terminal',
-        PROOT_PATH, // GoTTY executes PRoot
+        PROOT_PATH, 
         '-r', ROOTFS_DIR,
-        '-0', // Emulate root
-        '-w', '/root', // Set working directory to /root
+        '-0', 
+        '-w', '/root', 
         '-b', '/proc', '-b', '/dev', '-b', '/sys',
-        // CRITICAL FIX: Initialize PATH, safely setup screen folder, and execute fallback if missing
-        '/bin/bash', '-c', 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && export TERM=xterm-256color && if [ -x /usr/bin/screen ]; then export SCREENDIR=/root/.screen && mkdir -p $SCREENDIR && exec /usr/bin/screen -xRR core_session; else echo -e "\\e[91m[WARNING] Screen failed to install during initial setup. Falling back to standard Bash.\\e[0m\\nRun \\e[93mapt-get update && apt-get install screen\\e[0m manually." && exec /bin/bash; fi'
+        '/bin/bash', '-c', 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && export TERM=xterm-256color && if [ -x /usr/bin/screen ]; then export SCREENDIR=/root/.screen && mkdir -p $SCREENDIR && exec /usr/bin/screen -xRR core_session; else echo -e "\\e[91m[WARNING] Screen failed to install. Falling back to standard Bash.\\e[0m" && exec /bin/bash; fi'
     ];
 
     const gottyProcess = spawn(GOTTY_PATH, gottyArgs, { stdio: 'inherit' });
